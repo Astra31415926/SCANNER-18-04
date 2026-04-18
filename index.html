@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>SCI QR Scanner</title>
+    <!-- Подключаем библиотеку jsQR для декодирования -->
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <style>
+        :root {
+            --ui-bg: rgba(0, 0, 0, 0.7);
+            --accent: #00ffcc;
+            --danger: #ff3333;
+            --text: #ffffff;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden; /* Запрещаем скролл */
+            color: var(--text);
+            touch-action: none;
+        }
+
+        /* Контейнер видео и канваса */
+        #container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #video {
+            display: none; /* Скрываем сырое видео, выводим только обработанный канвас */
+        }
+
+        #canvas {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* Заполняем экран */
+        }
+
+        /* Верхняя панель управления */
+        .controls-top {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            box-sizing: border-box;
+            z-index: 10;
+        }
+
+        /* Кнопки каналов */
+        .channel-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn {
+            background: var(--ui-bg);
+            border: 2px solid #555;
+            color: white;
+            padding: 10px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn.active {
+            border-color: var(--accent);
+            color: var(--accent);
+            box-shadow: 0 0 10px var(--accent);
+        }
+
+        /* Блок бинаризации */
+        .binarization-controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            background: var(--ui-bg);
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 5px;
+        }
+
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            justify-content: space-between;
+        }
+
+        /* Стиль ползунка */
+        input[type=range] {
+            width: 100%;
+            accent-color: var(--accent);
+        }
+
+        /* Лог данных внизу */
+        .log-panel {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+            padding: 40px 15px 15px 15px;
+            box-sizing: border-box;
+            z-index: 10;
+        }
+
+        #qr-log {
+            font-family: monospace;
+            font-size: 14px;
+            color: var(--accent);
+            max-height: 60px;
+            overflow-y: auto;
+            word-break: break-all;
+            text-shadow: 0 0 5px var(--accent);
+        }
+
+        /* Оверлей для рамки QR кода */
+        #overlay-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div id="container">
+    <video id="video" playsinline autoplay muted></video>
+    <canvas id="canvas"></canvas>
+    <canvas id="overlay-canvas"></canvas>
+
+    <!-- Верхняя панель -->
+    <div class="controls-top">
+        <div class="channel-buttons">
+            <button class="btn active" data-channel="R" onclick="setChannel('R')">R</button>
+            <button class="btn" data-channel="G" onclick="setChannel('G')">G</button>
+            <button class="btn" data-channel="B" onclick="setChannel('B')">B</button>
+        </div>
+
+        <div class="binarization-controls">
+            <div class="toggle-row">
+                <label for="bin-toggle" style="font-size: 14px;">Бинаризация</label>
+                <label class="switch">
+                    <input type="checkbox" id="bin-toggle" onchange="toggleBinarization()">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <input type="range" id="threshold-slider" min="0" max="255" value="128" disabled 
+                   oninput="updateThreshold(this.value)">
+            <div style="font-size: 12px; color: #aaa;">Порог: <span id="thresh-val">128</span></div>
+        </div>
+    </div>
+
+    <!-- Нижняя панель логов -->
+    <div class="log-panel">
+        <div id="qr-log">Ожидание QR-кода...</div>
+    </div>
+</div>
+
+<script>
+    // --- Конфигурация ---
+    const VIDEO_SETTINGS = {
+        video: {
+            facingMode: "environment",
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+        },
+        audio: false
+    };
+
+    // --- Состояние приложения ---
+    let state = {
+        channel: 'R',           // Текущий канал ['R', 'G', 'B']
+        binarize: false,        // Включена ли бинаризация
+        threshold: 128,         // Порог бинаризации
+        lastQrData: null,       // Последний считанный код (для избежания спама)
+        frameCount: 0,          // Счетчик FPS
+        lastFpsTime: 0
+    };
+
+    // Коэффициенты кросс-помех (k1, k2). 
+    // Подобраны эмпирически для типичных сенсоров, можно тюнить.
+    const SCI_COEFF = {
+        R: { g: 0.3, b: 0.3 }, // R_out = R - (G*0.3 + B*0.3)
+        G: { r: 0.2, b: 0.2 }, // G_out = G - (R*0.2 + B*0.2)
+        B: { r: 0.4, g: 0.3 }  // B_out = B - (R*0.4 + G*0.3)
+    };
+
+    // --- DOM Элементы ---
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true }); // Оптимизация для частого чтения
+    const overlayCanvas = document.getElementById('overlay-canvas');
+    const overlayCtx = overlayCanvas.getContext('2d');
+    const logEl = document.getElementById('qr-log');
+    const threshSlider = document.getElementById('threshold-slider');
+    const threshValEl = document.getElementById('thresh-val');
+
+    // --- Аудио контекст для бипера ---
+    let audioCtx = null;
+    function initAudio() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+    }
+    
+    function playBeep() {
+        if (!audioCtx) initAudio();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        
+        const osc = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        
+        osc.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        
+        osc.frequency.value = 880; // Частота (Ля)
+        osc.type = 'square';
+        gainNode.gain.value = 0.1; // Громкость
+        
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.1); // Короткий бип
+    }
+
+    // --- Инициализация камеры ---
+    async function initCamera() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia(VIDEO_SETTINGS);
+            video.srcObject = stream;
+            
+            // Ждем загрузки метаданных видео чтобы установить размер канваса
+            video.onloadedmetadata = () => {
+                video.play();
+                // Устанавливаем размеры канваса равными реальному разрешению видео
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                overlayCanvas.width = video.videoWidth;
+                overlayCanvas.height = video.videoHeight;
+                
+                requestAnimationFrame(processFrame);
+            };
+        } catch (err) {
+            console.error("Ошибка доступа к камере:", err);
+            logEl.innerText = "Ошибка камеры: " + err.message;
+            logEl.style.color = "red";
+        }
+    }
+
+    // --- Обработка кадров (Main Loop) ---
+    function processFrame() {
+        // 1. Отрисовка видео на канвас
+        // Если видео не готово или размер 0, пропускаем
+        if (video.readyState === video.HAVE_ENOUGH_DATA && canvas.width > 0) {
+            
+            // Рисуем текущий кадр
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            // 2. Получаем данные пикселей
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            
+            // 3. Применяем SCI и Бинаризацию
+            applyProcessing(data);
+            
+            // 4. Кладем обработанные данные обратно
+            ctx.putImageData(imageData, 0, 0);
+
+            // 5. Распознавание QR
+            // jsQR работает с данными изображения, мы берем их из imageData, 
+            // который мы только что модифицировали (он теперь в оттенках серого).
+            // Но putImageData не меняет imageData объект, он его отрисовывает.
+            // Для экономии памяти мы можем скормить тот же data буфер, но jsQR ожидает формат RGBA.
+            // Наш `data` уже модифицирован и содержит серый цвет в RGB каналах. Это подходит.
+            
+            const code = jsQR(data, canvas.width, canvas.height, {
+                inversionAttempts: "dontInvert", // В SCI режиме инверсия редко нужна
+            });
+
+            // 6. Отрисовка UI и индикация
+            handleQR(code);
+        }
+
+        requestAnimationFrame(processFrame);
+    }
+
+    // --- Математический движок (SCI + Binarization) ---
+    function applyProcessing(data) {
+        const coeff = SCI_COEFF[state.channel];
+        const thresh = state.threshold;
+        const bin = state.binarize;
+        const len = data.length;
+
+        // Выбор формулы в зависимости от канала
+        // Мы проходим по массиву RGBA (шаг 4)
+        for (let i = 0; i < len; i += 4) {
+            let r = data[i];
+            let g = data[i+1];
+            let b = data[i+2];
+            let val;
+
+            // Декуплизация (вычитание кросс-помех)
+            switch(state.channel) {
+                case 'R':
+                    // R_out = R - (G*k + B*k)
+                    val = r - (g * coeff.g + b * coeff.b);
+                    break;
+                case 'G':
+                    // G_out = G - (R*k + B*k)
+                    val = g - (r * coeff.r + b * coeff.b);
+                    break;
+                case 'B':
+                    // B_out = B - (R*k + G*k)
+                    val = b - (r * coeff.r + g * coeff.g);
+                    break;
+            }
+
+            // Нормализация (0-255). Uint8ClampedArray делает это автоматически при присваивании,
+            // но для бинаризации нам нужно точное значение.
+            val = Math.max(0, Math.min(255, val));
+
+            // Бинаризация
+            if (bin) {
+                val = (val > thresh) ? 255 : 0;
+            }
+
+            // Устанавливаем результат в RGB (отображение ч/б)
+            data[i] = val;
+            data[i+1] = val;
+            data[i+2] = val;
+            // Alpha канал (data[i+3]) не трогаем
+        }
+    }
+
+    // --- Обработка QR кода ---
+    function handleQR(code) {
+        overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+        if (code) {
+            // Рисуем рамку
+            drawBoundingBox(code.location);
+            
+            // Логика обновления лога и звука
+            if (code.data !== state.lastQrData) {
+                state.lastQrData = code.data;
+                logEl.innerText = code.data;
+                playBeep();
+                
+                // Визуальный эффект
+                logEl.style.color = "#fff";
+                setTimeout(() => logEl.style.color = "var(--accent)", 100);
+            }
+        }
+    }
+
+    // --- Отрисовка Bounding Box ---
+    function drawBoundingBox(location) {
+        const { topLeftCorner, topRightCorner, bottomRightCorner, bottomLeftCorner } = location;
+        
+        overlayCtx.beginPath();
+        overlayCtx.moveTo(topLeftCorner.x, topLeftCorner.y);
+        overlayCtx.lineTo(topRightCorner.x, topRightCorner.y);
+        overlayCtx.lineTo(bottomRightCorner.x, bottomRightCorner.y);
+        overlayCtx.lineTo(bottomLeftCorner.x, bottomLeftCorner.y);
+        overlayCtx.closePath();
+        
+        overlayCtx.lineWidth = 4;
+        overlayCtx.strokeStyle = '#00ffcc';
+        overlayCtx.stroke();
+        
+        // Углы
+        overlayCtx.fillStyle = '#00ffcc';
+        const points = [topLeftCorner, topRightCorner, bottomRightCorner, bottomLeftCorner];
+        points.forEach(p => {
+            overlayCtx.fillRect(p.x - 5, p.y - 5, 10, 10);
+        });
+    }
+
+    // --- UI Callbacks ---
+    function setChannel(ch) {
+        state.channel = ch;
+        // Обновление стилей кнопок
+        document.querySelectorAll('.channel-buttons .btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.channel === ch);
+        });
+    }
+
+    function toggleBinarization() {
+        state.binarize = document.getElementById('bin-toggle').checked;
+        threshSlider.disabled = !state.binarize;
+    }
+
+    function updateThreshold(val) {
+        state.threshold = parseInt(val);
+        threshValEl.innerText = val;
+    }
+
+    // --- Запуск ---
+    // Инициализация аудио по первому касанию (требование браузеров)
+    document.body.addEventListener('click', () => {
+        initAudio();
+    }, { once: true });
+
+    window.onload = initCamera;
+
+    // Добавляем CSS для Switch (toggle)
+    const style = document.createElement('style');
+    style.innerHTML = `
+        .switch { position: relative; display: inline-block; width: 50px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #555; transition: .4s; border-radius: 24px; }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--accent); }
+        input:checked + .slider:before { transform: translateX(26px); }
+    `;
+    document.head.appendChild(style);
+
+</script>
+</body>
+</html>
