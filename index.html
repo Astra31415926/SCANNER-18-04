@@ -2,440 +2,652 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>SCI QR Scanner</title>
-    <!-- Подключаем библиотеку jsQR для декодирования -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SCI Lab Scanner</title>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --ui-bg: rgba(0, 0, 0, 0.7);
-            --accent: #00ffcc;
-            --danger: #ff3333;
-            --text: #ffffff;
+            --bg: #0a0a0a;
+            --surface: #141414;
+            --border: #333;
+            --text: #e0e0e0;
+            --red: #FF004D;
+            --green: #00FF41;
+            --blue: #0088FF;
         }
 
         body {
-            margin: 0;
-            padding: 0;
-            background-color: #000;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            overflow: hidden; /* Запрещаем скролл */
+            background: var(--bg);
             color: var(--text);
-            touch-action: none;
-        }
-
-        /* Контейнер видео и канваса */
-        #container {
-            position: relative;
-            width: 100vw;
-            height: 100vh;
-        }
-
-        #video {
-            display: none; /* Скрываем сырое видео, выводим только обработанный канвас */
-        }
-
-        #canvas {
-            width: 100%;
-            height: 100%;
-            object-fit: cover; /* Заполняем экран */
-        }
-
-        /* Верхняя панель управления */
-        .controls-top {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            padding: 15px;
-            background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+            font-family: 'Inter', sans-serif;
+            margin: 0;
             display: flex;
             flex-direction: column;
-            gap: 10px;
-            box-sizing: border-box;
-            z-index: 10;
+            height: 100vh;
+            overflow: hidden;
         }
 
-        /* Кнопки каналов */
-        .channel-buttons {
+        /* Header Tabs & LED Bar */
+        .header-container {
+            background: #000;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .tabs {
+            display: flex;
+        }
+        .tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            font-weight: 600;
+            cursor: pointer;
+            opacity: 0.4;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+            font-family: 'JetBrains Mono', monospace;
+            position: relative;
+        }
+        .tab.active {
+            opacity: 1;
+            border-bottom-color: var(--text);
+        }
+        .tab.r.active { border-bottom-color: var(--red); color: var(--red); }
+        .tab.g.active { border-bottom-color: var(--green); color: var(--green); }
+        .tab.b.active { border-bottom-color: var(--blue); color: var(--blue); }
+
+        /* LED Bar */
+        .led-bar {
             display: flex;
             justify-content: center;
-            gap: 10px;
+            gap: 30px;
+            padding: 10px;
+            background: #111;
         }
-
-        .btn {
-            background: var(--ui-bg);
-            border: 2px solid #555;
-            color: white;
-            padding: 10px 20px;
-            font-size: 16px;
+        .led-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
             font-weight: bold;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s;
+            color: #555;
         }
-
-        .btn.active {
-            border-color: var(--accent);
-            color: var(--accent);
-            box-shadow: 0 0 10px var(--accent);
+        .led-circle {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #222;
+            transition: all 0.1s;
         }
+        /* LED Active States */
+        .led-item.r.active .led-circle { background-color: var(--red); box-shadow: 0 0 10px var(--red); }
+        .led-item.r.active { color: var(--red); }
+        
+        .led-item.g.active .led-circle { background-color: var(--green); box-shadow: 0 0 10px var(--green); }
+        .led-item.g.active { color: var(--green); }
+        
+        .led-item.b.active .led-circle { background-color: var(--blue); box-shadow: 0 0 10px var(--blue); }
+        .led-item.b.active { color: var(--blue); }
 
-        /* Блок бинаризации */
-        .binarization-controls {
+        /* Main Content */
+        .main-container {
+            flex: 1;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            gap: 5px;
-            background: var(--ui-bg);
-            padding: 10px;
-            border-radius: 8px;
-            margin-top: 5px;
+            overflow-y: auto;
+            padding-bottom: 20px;
         }
 
-        .toggle-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
+        /* Canvas Area */
+        .canvas-wrapper {
+            position: relative;
             width: 100%;
-            justify-content: space-between;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 250px;
+            border-bottom: 1px solid var(--border);
+        }
+        #canvas-display {
+            max-width: 100%;
+            max-height: 100%;
+        }
+        #video-source { display: none; }
+
+        /* Controls */
+        .controls-panel {
+            padding: 15px;
+            background: var(--surface);
+            border-radius: 12px;
+            margin: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
         }
 
-        /* Стиль ползунка */
+        .slider-group { margin-bottom: 15px; }
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 2px;
+            font-size: 12px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .slider-val {
+            color: var(--text);
+            background: #222;
+            padding: 1px 6px;
+            border-radius: 4px;
+        }
+        
+        /* Range Metrics */
+        .range-metrics {
+            font-size: 10px;
+            color: #888;
+            margin-top: 2px;
+            margin-bottom: 5px;
+            font-family: 'JetBrains Mono', monospace;
+            height: 12px;
+        }
+        .range-metrics span { color: var(--green); font-weight: bold; }
+        .range-metrics em { color: #555; font-style: normal; }
+
         input[type=range] {
             width: 100%;
-            accent-color: var(--accent);
+            background: transparent;
+            -webkit-appearance: none;
         }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px; background: #333; border-radius: 2px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            height: 16px; width: 16px; border-radius: 50%;
+            background: var(--text); -webkit-appearance: none; margin-top: -6px; cursor: pointer;
+        }
+        .tab.r input[type=range]::-webkit-slider-thumb { background: var(--red); }
+        .tab.g input[type=range]::-webkit-slider-thumb { background: var(--green); }
+        .tab.b input[type=range]::-webkit-slider-thumb { background: var(--blue); }
 
-        /* Лог данных внизу */
-        .log-panel {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
-            padding: 40px 15px 15px 15px;
-            box-sizing: border-box;
-            z-index: 10;
+        /* Buttons */
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            padding: 0 15px;
+            margin-top: 15px;
         }
-
-        #qr-log {
-            font-family: monospace;
-            font-size: 14px;
-            color: var(--accent);
-            max-height: 60px;
-            overflow-y: auto;
-            word-break: break-all;
-            text-shadow: 0 0 5px var(--accent);
+        .btn-start {
+            flex: 2; padding: 12px; background: #fff; color: #000;
+            border: none; border-radius: 8px; font-weight: bold; cursor: pointer;
         }
-
-        /* Оверлей для рамки QR кода */
-        #overlay-canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 5;
+        .btn-load {
+            flex: 2; padding: 12px; background: transparent; color: #fff;
+            border: 1px solid #fff; border-radius: 8px; font-weight: bold; cursor: pointer;
         }
-
-        .hidden {
-            display: none;
+        .btn-reset-ranges {
+            flex: 1; padding: 12px; background: transparent; color: var(--red);
+            border: 1px solid var(--red); border-radius: 8px; font-weight: bold; cursor: pointer;
+            font-size: 11px;
         }
+        #file-input { display: none; }
     </style>
 </head>
 <body>
 
-<div id="container">
-    <video id="video" playsinline autoplay muted></video>
-    <canvas id="canvas"></canvas>
-    <canvas id="overlay-canvas"></canvas>
-
-    <!-- Верхняя панель -->
-    <div class="controls-top">
-        <div class="channel-buttons">
-            <button class="btn active" data-channel="R" onclick="setChannel('R')">R</button>
-            <button class="btn" data-channel="G" onclick="setChannel('G')">G</button>
-            <button class="btn" data-channel="B" onclick="setChannel('B')">B</button>
+    <div class="header-container">
+        <!-- Tabs -->
+        <div class="tabs">
+            <div class="tab r active" onclick="switchTab('R')">RED</div>
+            <div class="tab g" onclick="switchTab('G')">GREEN</div>
+            <div class="tab b" onclick="switchTab('B')">BLUE</div>
         </div>
-
-        <div class="binarization-controls">
-            <div class="toggle-row">
-                <label for="bin-toggle" style="font-size: 14px;">Бинаризация</label>
-                <label class="switch">
-                    <input type="checkbox" id="bin-toggle" onchange="toggleBinarization()">
-                    <span class="slider"></span>
-                </label>
+        <!-- LED Bar -->
+        <div class="led-bar">
+            <div class="led-item r" id="led-r">
+                <div class="led-circle"></div><span>R</span>
             </div>
-            <input type="range" id="threshold-slider" min="0" max="255" value="128" disabled 
-                   oninput="updateThreshold(this.value)">
-            <div style="font-size: 12px; color: #aaa;">Порог: <span id="thresh-val">128</span></div>
+            <div class="led-item g" id="led-g">
+                <div class="led-circle"></div><span>G</span>
+            </div>
+            <div class="led-item b" id="led-b">
+                <div class="led-circle"></div><span>B</span>
+            </div>
         </div>
     </div>
 
-    <!-- Нижняя панель логов -->
-    <div class="log-panel">
-        <div id="qr-log">Ожидание QR-кода...</div>
+    <div class="main-container">
+        <!-- Canvas Display -->
+        <div class="canvas-wrapper">
+            <canvas id="canvas-display"></canvas>
+            <video id="video-source" playsinline></video>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls-panel">
+            <!-- Offset -->
+            <div class="slider-group">
+                <div class="slider-header">
+                    <span>Offset (Смещение)</span>
+                    <span class="slider-val" id="val-offset">0</span>
+                </div>
+                <input type="range" id="sl-offset" min="-100" max="100" value="0" step="1" oninput="updateParam('offset', this.value)">
+                <div class="range-metrics" id="range-offset"><em>Диапазон: —</em></div>
+            </div>
+
+            <!-- Gain -->
+            <div class="slider-group">
+                <div class="slider-header">
+                    <span>Gain (Усиление)</span>
+                    <span class="slider-val" id="val-gain">1.0</span>
+                </div>
+                <input type="range" id="sl-gain" min="0.0" max="5.0" value="1.0" step="0.1" oninput="updateParam('gain', this.value)">
+                <div class="range-metrics" id="range-gain"><em>Диапазон: —</em></div>
+            </div>
+
+            <!-- k1 -->
+            <div class="slider-group">
+                <div class="slider-header">
+                    <span id="label-k1">k1</span>
+                    <span class="slider-val" id="val-k1">0.0</span>
+                </div>
+                <input type="range" id="sl-k1" min="0.0" max="2.0" value="0.0" step="0.01" oninput="updateParam('k1', this.value)">
+                <div class="range-metrics" id="range-k1"><em>Диапазон: —</em></div>
+            </div>
+
+            <!-- k2 -->
+            <div class="slider-group">
+                <div class="slider-header">
+                    <span id="label-k2">k2</span>
+                    <span class="slider-val" id="val-k2">0.0</span>
+                </div>
+                <input type="range" id="sl-k2" min="0.0" max="2.0" value="0.0" step="0.01" oninput="updateParam('k2', this.value)">
+                <div class="range-metrics" id="range-k2"><em>Диапазон: —</em></div>
+            </div>
+
+            <!-- Bradley Window -->
+            <div class="slider-group">
+                <div class="slider-header">
+                    <span>Bradley Window (Окно)</span>
+                    <span class="slider-val" id="val-win">8</span>
+                </div>
+                <input type="range" id="sl-win" min="2" max="64" value="8" step="1" oninput="updateParam('win', this.value)">
+                <div class="range-metrics" id="range-win"><em>Диапазон: —</em></div>
+            </div>
+
+            <!-- Bradley Sens -->
+            <div class="slider-group">
+                <div class="slider-header">
+                    <span>Bradley S (Чувств.)</span>
+                    <span class="slider-val" id="val-sens">0.15</span>
+                </div>
+                <input type="range" id="sl-sens" min="0.01" max="0.50" value="0.15" step="0.01" oninput="updateParam('sens', this.value)">
+                <div class="range-metrics" id="range-sens"><em>Диапазон: —</em></div>
+            </div>
+        </div>
+
+        <div class="btn-group">
+            <button class="btn-start" onclick="toggleCamera()">Камера</button>
+            <input type="file" id="file-input" accept="image/*" onchange="handleFileSelect(event)">
+            <button class="btn-load" onclick="document.getElementById('file-input').click()">Фото</button>
+            <button class="btn-reset-ranges" onclick="resetRanges()">Сброс<br>Замеры</button>
+        </div>
     </div>
-</div>
 
 <script>
-    // --- Конфигурация ---
-    const VIDEO_SETTINGS = {
-        video: {
-            facingMode: "environment",
-            width: { ideal: 1920 },
-            height: { ideal: 1080 }
+    // === STATE & CONFIG ===
+    const state = {
+        activeChannel: 'R',
+        isRunning: false,
+        staticImageData: null,
+        lastResultStr: null, // For beep logic
+        results: { R: null, G: null, B: null },
+        config: {
+            R: { offset: 0, gain: 1.0, k1: 0.0, k2: 0.0, win: 8, sens: 0.15, neighbors: ['G', 'B'] },
+            G: { offset: 0, gain: 1.0, k1: 0.0, k2: 0.0, win: 8, sens: 0.15, neighbors: ['R', 'B'] },
+            B: { offset: 0, gain: 1.0, k1: 0.0, k2: 0.0, win: 8, sens: 0.15, neighbors: ['R', 'G'] }
         },
-        audio: false
-    };
-
-    // --- Состояние приложения ---
-    let state = {
-        channel: 'R',           // Текущий канал ['R', 'G', 'B']
-        binarize: false,        // Включена ли бинаризация
-        threshold: 128,         // Порог бинаризации
-        lastQrData: null,       // Последний считанный код (для избежания спама)
-        frameCount: 0,          // Счетчик FPS
-        lastFpsTime: 0
-    };
-
-    // Коэффициенты кросс-помех (k1, k2). 
-    // Подобраны эмпирически для типичных сенсоров, можно тюнить.
-    const SCI_COEFF = {
-        R: { g: 0.3, b: 0.3 }, // R_out = R - (G*0.3 + B*0.3)
-        G: { r: 0.2, b: 0.2 }, // G_out = G - (R*0.2 + B*0.2)
-        B: { r: 0.4, g: 0.3 }  // B_out = B - (R*0.4 + G*0.3)
-    };
-
-    // --- DOM Элементы ---
-    const video = document.getElementById('video');
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d', { willReadFrequently: true }); // Оптимизация для частого чтения
-    const overlayCanvas = document.getElementById('overlay-canvas');
-    const overlayCtx = overlayCanvas.getContext('2d');
-    const logEl = document.getElementById('qr-log');
-    const threshSlider = document.getElementById('threshold-slider');
-    const threshValEl = document.getElementById('thresh-val');
-
-    // --- Аудио контекст для бипера ---
-    let audioCtx = null;
-    function initAudio() {
-        if (!audioCtx) {
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        // Range memory storage
+        ranges: {
+            R: {}, G: {}, B: {}
         }
-    }
-    
+    };
+
+    // Initialize Range Storage
+    ['R', 'G', 'B'].forEach(ch => {
+        ['offset', 'gain', 'k1', 'k2', 'win', 'sens'].forEach(param => {
+            state.ranges[ch][param] = { min: Infinity, max: -Infinity };
+        });
+    });
+
+    const els = {
+        video: document.getElementById('video-source'),
+        canvas: document.getElementById('canvas-display'),
+        ctx: document.getElementById('canvas-display').getContext('2d', { willReadFrequently: true })
+    };
+
+    // === 1. AUDIO & UI LOGIC ===
+
     function playBeep() {
-        if (!audioCtx) initAudio();
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-        
-        const osc = audioCtx.createOscillator();
-        const gainNode = audioCtx.createGain();
-        
-        osc.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-        
-        osc.frequency.value = 880; // Частота (Ля)
-        osc.type = 'square';
-        gainNode.gain.value = 0.1; // Громкость
-        
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.1); // Короткий бип
-    }
-
-    // --- Инициализация камеры ---
-    async function initCamera() {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia(VIDEO_SETTINGS);
-            video.srcObject = stream;
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.frequency.value = 800;
+            osc.type = 'square';
+            gain.gain.setValueAtTime(0.1, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.1);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 0.1);
+        } catch(e) {}
+    }
+
+    function switchTab(ch) {
+        state.activeChannel = ch;
+        state.lastResultStr = null; // Reset beep memory on tab switch
+        
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelector(`.tab.${ch.toLowerCase()}`).classList.add('active');
+
+        const conf = state.config[ch];
+        document.getElementById('label-k1').innerText = `k1 (Вычесть ${conf.neighbors[0]})`;
+        document.getElementById('label-k2').innerText = `k2 (Вычесть ${conf.neighbors[1]})`;
+
+        loadParamsToUI(ch);
+        updateRangeDisplay(ch);
+
+        if (state.staticImageData && !state.isRunning) processStaticImage();
+    }
+
+    function loadParamsToUI(ch) {
+        const conf = state.config[ch];
+        document.getElementById('sl-offset').value = conf.offset;
+        document.getElementById('sl-gain').value = conf.gain;
+        document.getElementById('sl-k1').value = conf.k1;
+        document.getElementById('sl-k2').value = conf.k2;
+        document.getElementById('sl-win').value = conf.win;
+        document.getElementById('sl-sens').value = conf.sens;
+
+        document.getElementById('val-offset').innerText = conf.offset;
+        document.getElementById('val-gain').innerText = conf.gain.toFixed(2);
+        document.getElementById('val-k1').innerText = conf.k1.toFixed(2);
+        document.getElementById('val-k2').innerText = conf.k2.toFixed(2);
+        document.getElementById('val-win').innerText = conf.win;
+        document.getElementById('val-sens').innerText = conf.sens.toFixed(2);
+    }
+
+    function updateParam(key, value) {
+        const ch = state.activeChannel;
+        let val = parseFloat(value);
+        if (key === 'offset' || key === 'win') val = parseInt(value);
+        state.config[ch][key] = val;
+
+        const displayEl = document.getElementById(`val-${key === 'sens' ? 'sens' : key}`);
+        if(key === 'win' || key === 'offset') displayEl.innerText = val;
+        else displayEl.innerText = val.toFixed(2);
+
+        if (state.staticImageData && !state.isRunning) processStaticImage();
+    }
+
+    // LED & Range Display Logic
+    function setLED(ch, status) {
+        const el = document.getElementById(`led-${ch.toLowerCase()}`);
+        if (status) el.classList.add('active');
+        else el.classList.remove('active');
+    }
+
+    function updateRangeDisplay(ch) {
+        const ranges = state.ranges[ch];
+        const params = ['offset', 'gain', 'k1', 'k2', 'win', 'sens'];
+        
+        params.forEach(p => {
+            const el = document.getElementById(`range-${p}`);
+            const r = ranges[p];
             
-            // Ждем загрузки метаданных видео чтобы установить размер канваса
-            video.onloadedmetadata = () => {
-                video.play();
-                // Устанавливаем размеры канваса равными реальному разрешению видео
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                overlayCanvas.width = video.videoWidth;
-                overlayCanvas.height = video.videoHeight;
-                
-                requestAnimationFrame(processFrame);
+            if (r.min !== Infinity && r.max !== -Infinity) {
+                let minDisp = (p === 'offset' || p === 'win') ? r.min : r.min.toFixed(2);
+                let maxDisp = (p === 'offset' || p === 'win') ? r.max : r.max.toFixed(2);
+                el.innerHTML = `<span>Диапазон: ${minDisp} — ${maxDisp}</span>`;
+            } else if (r.min !== Infinity) {
+                 let minDisp = (p === 'offset' || p === 'win') ? r.min : r.min.toFixed(2);
+                 el.innerHTML = `<span>Min OK: ${minDisp}</span>`;
+            } else {
+                el.innerHTML = `<em>Диапазон: —</em>`;
+            }
+        });
+    }
+
+    function resetRanges() {
+        ['R', 'G', 'B'].forEach(ch => {
+            ['offset', 'gain', 'k1', 'k2', 'win', 'sens'].forEach(param => {
+                state.ranges[ch][param] = { min: Infinity, max: -Infinity };
+            });
+            state.results[ch] = null;
+            setLED(ch, false);
+        });
+        updateRangeDisplay(state.activeChannel);
+    }
+
+    // === 2. FILE HANDLING ===
+
+    function handleFileSelect(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        if (state.isRunning) toggleCamera(); 
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                els.canvas.width = 480; els.canvas.height = 480;
+                const size = Math.min(img.width, img.height);
+                const sx = (img.width - size) / 2;
+                const sy = (img.height - size) / 2;
+                els.ctx.drawImage(img, sx, sy, size, size, 0, 0, 480, 480);
+                state.staticImageData = els.ctx.getImageData(0, 0, 480, 480);
+                processStaticImage();
             };
-        } catch (err) {
-            console.error("Ошибка доступа к камере:", err);
-            logEl.innerText = "Ошибка камеры: " + err.message;
-            logEl.style.color = "red";
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // === 3. PROCESSING ENGINE ===
+
+    function handleDecodeSuccess(codeData, ch) {
+        // 1. Update State
+        const isNew = state.results[ch] !== codeData;
+        state.results[ch] = codeData;
+        
+        // 2. LED ON
+        setLED(ch, true);
+
+        // 3. Beep if new
+        if (isNew) playBeep();
+
+        // 4. Range Detector Logic
+        const conf = state.config[ch];
+        const range = state.ranges[ch];
+        const params = ['offset', 'gain', 'k1', 'k2', 'win', 'sens'];
+        
+        let updated = false;
+        params.forEach(p => {
+            let val = conf[p];
+            if (p !== 'offset' && p !== 'win') val = parseFloat(val.toFixed(2));
+
+            if (val < range[p].min) {
+                range[p].min = val;
+                updated = true;
+            }
+            if (val > range[p].max) {
+                range[p].max = val;
+                updated = true;
+            }
+        });
+
+        if (updated) updateRangeDisplay(ch);
+    }
+
+    function handleDecodeFail(ch) {
+        state.results[ch] = null;
+        setLED(ch, false);
+    }
+
+    function processStaticImage() {
+        if (!state.staticImageData) return;
+        const src = state.staticImageData;
+        const conf = state.config[state.activeChannel];
+        const w = 480, h = 480;
+        const currentData = new ImageData(new Uint8ClampedArray(src.data), w, h);
+        const processedBuffer = new Uint8ClampedArray(w * h);
+
+        // SCI
+        for (let i = 0; i < src.data.length; i += 4) {
+            let r = src.data[i], g = src.data[i+1], b = src.data[i+2];
+            let target, n1, n2;
+            if (state.activeChannel === 'R') { target = r; n1 = g; n2 = b; }
+            else if (state.activeChannel === 'G') { target = g; n1 = r; n2 = b; }
+            else { target = b; n1 = r; n2 = g; }
+            let res = (target - (n1 * conf.k1 + n2 * conf.k2)) * conf.gain + conf.offset;
+            res = Math.max(0, Math.min(255, res));
+            processedBuffer[i/4] = res;
+            currentData.data[i] = res; currentData.data[i+1] = res; currentData.data[i+2] = res; currentData.data[i+3] = 255;
+        }
+
+        // Bradley
+        applyBradley(processedBuffer, currentData, w, h, conf.win, conf.sens);
+        els.ctx.putImageData(currentData, 0, 0);
+
+        // Scan
+        const code = jsQR(currentData.data, w, h, { inversionAttempts: "dontInvert" });
+        if (code) {
+            handleDecodeSuccess(code.data, state.activeChannel);
+            drawOverlay(code.location);
+        } else {
+            handleDecodeFail(state.activeChannel);
         }
     }
 
-    // --- Обработка кадров (Main Loop) ---
     function processFrame() {
-        // 1. Отрисовка видео на канвас
-        // Если видео не готово или размер 0, пропускаем
-        if (video.readyState === video.HAVE_ENOUGH_DATA && canvas.width > 0) {
-            
-            // Рисуем текущий кадр
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            
-            // 2. Получаем данные пикселей
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const data = imageData.data;
-            
-            // 3. Применяем SCI и Бинаризацию
-            applyProcessing(data);
-            
-            // 4. Кладем обработанные данные обратно
-            ctx.putImageData(imageData, 0, 0);
+        if (!state.isRunning) return;
+        const video = els.video;
+        const canvas = els.canvas;
+        const ctx = els.ctx;
 
-            // 5. Распознавание QR
-            // jsQR работает с данными изображения, мы берем их из imageData, 
-            // который мы только что модифицировали (он теперь в оттенках серого).
-            // Но putImageData не меняет imageData объект, он его отрисовывает.
-            // Для экономии памяти мы можем скормить тот же data буфер, но jsQR ожидает формат RGBA.
-            // Наш `data` уже модифицирован и содержит серый цвет в RGB каналах. Это подходит.
-            
-            const code = jsQR(data, canvas.width, canvas.height, {
-                inversionAttempts: "dontInvert", // В SCI режиме инверсия редко нужна
-            });
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            if (canvas.width !== 480) { canvas.width = 480; canvas.height = 480; }
+            const size = Math.min(video.videoWidth, video.videoHeight);
+            const sx = (video.videoWidth - size) / 2;
+            const sy = (video.videoHeight - size) / 2;
+            ctx.drawImage(video, sx, sy, size, size, 0, 0, 480, 480);
 
-            // 6. Отрисовка UI и индикация
-            handleQR(code);
+            const imgData = ctx.getImageData(0, 0, 480, 480);
+            const src = imgData.data; 
+            const srcCopy = new Uint8ClampedArray(src);
+            const processedBuffer = new Uint8ClampedArray(480 * 480);
+            const conf = state.config[state.activeChannel];
+
+            // SCI
+            for (let i = 0; i < srcCopy.length; i += 4) {
+                let r = srcCopy[i], g = srcCopy[i+1], b = srcCopy[i+2];
+                let target, n1, n2;
+                if (state.activeChannel === 'R') { target = r; n1 = g; n2 = b; }
+                else if (state.activeChannel === 'G') { target = g; n1 = r; n2 = b; }
+                else { target = b; n1 = r; n2 = g; }
+                let res = (target - (n1 * conf.k1 + n2 * conf.k2)) * conf.gain + conf.offset;
+                res = Math.max(0, Math.min(255, res));
+                processedBuffer[i/4] = res;
+                src[i] = res; src[i+1] = res; src[i+2] = res; src[i+3] = 255;
+            }
+
+            // Bradley
+            applyBradley(processedBuffer, imgData, 480, 480, conf.win, conf.sens);
+            ctx.putImageData(imgData, 0, 0);
+
+            // Scan
+            const code = jsQR(imgData.data, 480, 480, { inversionAttempts: "dontInvert" });
+            if (code) {
+                handleDecodeSuccess(code.data, state.activeChannel);
+                drawOverlay(code.location);
+            } else {
+                handleDecodeFail(state.activeChannel);
+            }
         }
-
         requestAnimationFrame(processFrame);
     }
 
-    // --- Математический движок (SCI + Binarization) ---
-    function applyProcessing(data) {
-        const coeff = SCI_COEFF[state.channel];
-        const thresh = state.threshold;
-        const bin = state.binarize;
-        const len = data.length;
-
-        // Выбор формулы в зависимости от канала
-        // Мы проходим по массиву RGBA (шаг 4)
-        for (let i = 0; i < len; i += 4) {
-            let r = data[i];
-            let g = data[i+1];
-            let b = data[i+2];
-            let val;
-
-            // Декуплизация (вычитание кросс-помех)
-            switch(state.channel) {
-                case 'R':
-                    // R_out = R - (G*k + B*k)
-                    val = r - (g * coeff.g + b * coeff.b);
-                    break;
-                case 'G':
-                    // G_out = G - (R*k + B*k)
-                    val = g - (r * coeff.r + b * coeff.b);
-                    break;
-                case 'B':
-                    // B_out = B - (R*k + G*k)
-                    val = b - (r * coeff.r + g * coeff.g);
-                    break;
+    // === 4. ALGORITHMS ===
+    
+    function applyBradley(srcGrayBuffer, outImgData, w, h, windowSize, sensitivity) {
+        const intImg = new Int32Array(w * h);
+        for (let y = 0; y < h; y++) {
+            let sum = 0;
+            for (let x = 0; x < w; x++) {
+                const idx = y * w + x;
+                sum += srcGrayBuffer[idx];
+                intImg[idx] = (y > 0 ? intImg[(y - 1) * w + x] : 0) + sum;
             }
-
-            // Нормализация (0-255). Uint8ClampedArray делает это автоматически при присваивании,
-            // но для бинаризации нам нужно точное значение.
-            val = Math.max(0, Math.min(255, val));
-
-            // Бинаризация
-            if (bin) {
-                val = (val > thresh) ? 255 : 0;
-            }
-
-            // Устанавливаем результат в RGB (отображение ч/б)
-            data[i] = val;
-            data[i+1] = val;
-            data[i+2] = val;
-            // Alpha канал (data[i+3]) не трогаем
         }
-    }
-
-    // --- Обработка QR кода ---
-    function handleQR(code) {
-        overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-
-        if (code) {
-            // Рисуем рамку
-            drawBoundingBox(code.location);
-            
-            // Логика обновления лога и звука
-            if (code.data !== state.lastQrData) {
-                state.lastQrData = code.data;
-                logEl.innerText = code.data;
-                playBeep();
-                
-                // Визуальный эффект
-                logEl.style.color = "#fff";
-                setTimeout(() => logEl.style.color = "var(--accent)", 100);
+        const s = windowSize; 
+        const t = sensitivity; 
+        for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
+                const x1 = Math.max(0, x - s); const x2 = Math.min(w - 1, x + s);
+                const y1 = Math.max(0, y - s); const y2 = Math.min(h - 1, y + s);
+                const count = (x2 - x1) * (y2 - y1);
+                const A = intImg[y2 * w + x2];
+                const B = y1 > 0 ? intImg[(y1 - 1) * w + x2] : 0;
+                const C = x1 > 0 ? intImg[y2 * w + (x1 - 1)] : 0;
+                const D = (y1 > 0 && x1 > 0) ? intImg[(y1 - 1) * w + (x1 - 1)] : 0;
+                const sum = A - B - C + D;
+                const val = srcGrayBuffer[y * w + x];
+                if (val * count < sum * (1.0 - t)) {
+                    const pIdx = (y * w + x) * 4;
+                    outImgData.data[pIdx] = 0; outImgData.data[pIdx+1] = 0; outImgData.data[pIdx+2] = 0;
+                } else {
+                    const pIdx = (y * w + x) * 4;
+                    outImgData.data[pIdx] = 255; outImgData.data[pIdx+1] = 255; outImgData.data[pIdx+2] = 255;
+                }
             }
         }
     }
 
-    // --- Отрисовка Bounding Box ---
-    function drawBoundingBox(location) {
-        const { topLeftCorner, topRightCorner, bottomRightCorner, bottomLeftCorner } = location;
-        
-        overlayCtx.beginPath();
-        overlayCtx.moveTo(topLeftCorner.x, topLeftCorner.y);
-        overlayCtx.lineTo(topRightCorner.x, topRightCorner.y);
-        overlayCtx.lineTo(bottomRightCorner.x, bottomRightCorner.y);
-        overlayCtx.lineTo(bottomLeftCorner.x, bottomLeftCorner.y);
-        overlayCtx.closePath();
-        
-        overlayCtx.lineWidth = 4;
-        overlayCtx.strokeStyle = '#00ffcc';
-        overlayCtx.stroke();
-        
-        // Углы
-        overlayCtx.fillStyle = '#00ffcc';
-        const points = [topLeftCorner, topRightCorner, bottomRightCorner, bottomLeftCorner];
-        points.forEach(p => {
-            overlayCtx.fillRect(p.x - 5, p.y - 5, 10, 10);
-        });
+    function drawOverlay(loc) {
+        const ctx = els.ctx;
+        ctx.strokeStyle = '#00FF00'; ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(loc.topLeftCorner.x, loc.topLeftCorner.y);
+        ctx.lineTo(loc.topRightCorner.x, loc.topRightCorner.y);
+        ctx.lineTo(loc.bottomRightCorner.x, loc.bottomRightCorner.y);
+        ctx.lineTo(loc.bottomLeftCorner.x, loc.bottomLeftCorner.y);
+        ctx.closePath();
+        ctx.stroke();
     }
 
-    // --- UI Callbacks ---
-    function setChannel(ch) {
-        state.channel = ch;
-        // Обновление стилей кнопок
-        document.querySelectorAll('.channel-buttons .btn').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.channel === ch);
-        });
+    // === 5. CAMERA INIT ===
+    async function toggleCamera() {
+        const btn = document.querySelector('.btn-start');
+        if (state.isRunning) {
+            state.isRunning = false;
+            els.video.pause();
+            if(els.video.srcObject) els.video.srcObject.getTracks().forEach(t => t.stop());
+            btn.innerText = "Камера";
+            return;
+        }
+        try {
+            state.staticImageData = null;
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1280 } } });
+            els.video.srcObject = stream;
+            els.video.play();
+            state.isRunning = true;
+            btn.innerText = "Стоп";
+            requestAnimationFrame(processFrame);
+        } catch (e) { alert("Camera Error: " + e.message); }
     }
 
-    function toggleBinarization() {
-        state.binarize = document.getElementById('bin-toggle').checked;
-        threshSlider.disabled = !state.binarize;
-    }
-
-    function updateThreshold(val) {
-        state.threshold = parseInt(val);
-        threshValEl.innerText = val;
-    }
-
-    // --- Запуск ---
-    // Инициализация аудио по первому касанию (требование браузеров)
-    document.body.addEventListener('click', () => {
-        initAudio();
-    }, { once: true });
-
-    window.onload = initCamera;
-
-    // Добавляем CSS для Switch (toggle)
-    const style = document.createElement('style');
-    style.innerHTML = `
-        .switch { position: relative; display: inline-block; width: 50px; height: 24px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #555; transition: .4s; border-radius: 24px; }
-        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: var(--accent); }
-        input:checked + .slider:before { transform: translateX(26px); }
-    `;
-    document.head.appendChild(style);
+    // Init
+    switchTab('R');
 
 </script>
 </body>
