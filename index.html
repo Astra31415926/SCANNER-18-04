@@ -35,160 +35,68 @@
             flex-shrink: 0;
         }
 
-        .tabs {
-            display: flex;
-        }
+        .tabs { display: flex; }
         .tab {
-            flex: 1;
-            padding: 15px;
-            text-align: center;
-            font-weight: 600;
-            cursor: pointer;
-            opacity: 0.4;
-            border-bottom: 3px solid transparent;
-            transition: all 0.2s;
+            flex: 1; padding: 15px; text-align: center; font-weight: 600; cursor: pointer;
+            opacity: 0.4; border-bottom: 3px solid transparent; transition: all 0.2s;
             font-family: 'JetBrains Mono', monospace;
-            position: relative;
         }
-        .tab.active {
-            opacity: 1;
-            border-bottom-color: var(--text);
-        }
+        .tab.active { opacity: 1; border-bottom-color: var(--text); }
         .tab.r.active { border-bottom-color: var(--red); color: var(--red); }
         .tab.g.active { border-bottom-color: var(--green); color: var(--green); }
         .tab.b.active { border-bottom-color: var(--blue); color: var(--blue); }
 
         /* LED Bar */
-        .led-bar {
-            display: flex;
-            justify-content: center;
-            gap: 30px;
-            padding: 10px;
-            background: #111;
-        }
-        .led-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 12px;
-            font-weight: bold;
-            color: #555;
-        }
-        .led-circle {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background-color: #222;
-            transition: all 0.1s;
-        }
-        /* LED Active States */
+        .led-bar { display: flex; justify-content: center; gap: 30px; padding: 10px; background: #111; }
+        .led-item { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: bold; color: #555; }
+        .led-circle { width: 12px; height: 12px; border-radius: 50%; background-color: #222; transition: all 0.1s; }
+        
         .led-item.r.active .led-circle { background-color: var(--red); box-shadow: 0 0 10px var(--red); }
         .led-item.r.active { color: var(--red); }
-        
         .led-item.g.active .led-circle { background-color: var(--green); box-shadow: 0 0 10px var(--green); }
         .led-item.g.active { color: var(--green); }
-        
         .led-item.b.active .led-circle { background-color: var(--blue); box-shadow: 0 0 10px var(--blue); }
         .led-item.b.active { color: var(--blue); }
 
         /* Main Content */
-        .main-container {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow-y: auto;
-            padding-bottom: 20px;
-        }
+        .main-container { flex: 1; display: flex; flex-direction: column; overflow-y: auto; padding-bottom: 20px; }
 
         /* Canvas Area */
         .canvas-wrapper {
-            position: relative;
-            width: 100%;
-            background: #000;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 250px;
+            position: relative; width: 100%; background: #000;
+            display: flex; justify-content: center; align-items: center; height: 250px;
             border-bottom: 1px solid var(--border);
         }
-        #canvas-display {
-            max-width: 100%;
-            max-height: 100%;
-        }
+        #canvas-display { max-width: 100%; max-height: 100%; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
         #video-source { display: none; }
 
         /* Controls */
         .controls-panel {
-            padding: 15px;
-            background: var(--surface);
-            border-radius: 12px;
-            margin: 15px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            padding: 15px; background: var(--surface); border-radius: 12px;
+            margin: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);
         }
 
         .slider-group { margin-bottom: 15px; }
-        .slider-header {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 2px;
-            font-size: 12px;
-            font-family: 'JetBrains Mono', monospace;
-        }
-        .slider-val {
-            color: var(--text);
-            background: #222;
-            padding: 1px 6px;
-            border-radius: 4px;
-        }
+        .slider-header { display: flex; justify-content: space-between; margin-bottom: 2px; font-size: 12px; font-family: 'JetBrains Mono', monospace; }
+        .slider-val { color: var(--text); background: #222; padding: 1px 6px; border-radius: 4px; }
         
         /* Range Metrics */
-        .range-metrics {
-            font-size: 10px;
-            color: #888;
-            margin-top: 2px;
-            margin-bottom: 5px;
-            font-family: 'JetBrains Mono', monospace;
-            height: 12px;
-        }
+        .range-metrics { font-size: 10px; color: #888; margin-top: 2px; margin-bottom: 5px; font-family: 'JetBrains Mono', monospace; height: 12px; }
         .range-metrics span { color: var(--green); font-weight: bold; }
         .range-metrics em { color: #555; font-style: normal; }
 
-        input[type=range] {
-            width: 100%;
-            background: transparent;
-            -webkit-appearance: none;
-        }
-        input[type=range]::-webkit-slider-runnable-track {
-            width: 100%; height: 4px; background: #333; border-radius: 2px;
-        }
-        input[type=range]::-webkit-slider-thumb {
-            height: 16px; width: 16px; border-radius: 50%;
-            background: var(--text); -webkit-appearance: none; margin-top: -6px; cursor: pointer;
-        }
+        input[type=range] { width: 100%; background: transparent; -webkit-appearance: none; }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; background: #333; border-radius: 2px; }
+        input[type=range]::-webkit-slider-thumb { height: 16px; width: 16px; border-radius: 50%; background: var(--text); -webkit-appearance: none; margin-top: -6px; cursor: pointer; }
         .tab.r input[type=range]::-webkit-slider-thumb { background: var(--red); }
         .tab.g input[type=range]::-webkit-slider-thumb { background: var(--green); }
         .tab.b input[type=range]::-webkit-slider-thumb { background: var(--blue); }
 
         /* Buttons */
-        .btn-group {
-            display: flex;
-            gap: 10px;
-            padding: 0 15px;
-            margin-top: 15px;
-        }
-        .btn-start {
-            flex: 2; padding: 12px; background: #fff; color: #000;
-            border: none; border-radius: 8px; font-weight: bold; cursor: pointer;
-        }
-        .btn-load {
-            flex: 2; padding: 12px; background: transparent; color: #fff;
-            border: 1px solid #fff; border-radius: 8px; font-weight: bold; cursor: pointer;
-        }
-        .btn-reset-ranges {
-            flex: 1; padding: 12px; background: transparent; color: var(--red);
-            border: 1px solid var(--red); border-radius: 8px; font-weight: bold; cursor: pointer;
-            font-size: 11px;
-        }
+        .btn-group { display: flex; gap: 10px; padding: 0 15px; margin-top: 15px; }
+        .btn-start { flex: 2; padding: 12px; background: #fff; color: #000; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .btn-load { flex: 2; padding: 12px; background: transparent; color: #fff; border: 1px solid #fff; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .btn-reset-ranges { flex: 1; padding: 12px; background: transparent; color: var(--red); border: 1px solid var(--red); border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 11px; }
         #file-input { display: none; }
     </style>
 </head>
@@ -203,22 +111,16 @@
         </div>
         <!-- LED Bar -->
         <div class="led-bar">
-            <div class="led-item r" id="led-r">
-                <div class="led-circle"></div><span>R</span>
-            </div>
-            <div class="led-item g" id="led-g">
-                <div class="led-circle"></div><span>G</span>
-            </div>
-            <div class="led-item b" id="led-b">
-                <div class="led-circle"></div><span>B</span>
-            </div>
+            <div class="led-item r" id="led-r"><div class="led-circle"></div><span>R</span></div>
+            <div class="led-item g" id="led-g"><div class="led-circle"></div><span>G</span></div>
+            <div class="led-item b" id="led-b"><div class="led-circle"></div><span>B</span></div>
         </div>
     </div>
 
     <div class="main-container">
         <!-- Canvas Display -->
         <div class="canvas-wrapper">
-            <canvas id="canvas-display"></canvas>
+            <canvas id="canvas-display" width="480" height="480"></canvas>
             <video id="video-source" playsinline></video>
         </div>
 
@@ -226,60 +128,37 @@
         <div class="controls-panel">
             <!-- Offset -->
             <div class="slider-group">
-                <div class="slider-header">
-                    <span>Offset (Смещение)</span>
-                    <span class="slider-val" id="val-offset">0</span>
-                </div>
+                <div class="slider-header"><span>Offset</span><span class="slider-val" id="val-offset">0</span></div>
                 <input type="range" id="sl-offset" min="-100" max="100" value="0" step="1" oninput="updateParam('offset', this.value)">
                 <div class="range-metrics" id="range-offset"><em>Диапазон: —</em></div>
             </div>
-
             <!-- Gain -->
             <div class="slider-group">
-                <div class="slider-header">
-                    <span>Gain (Усиление)</span>
-                    <span class="slider-val" id="val-gain">1.0</span>
-                </div>
+                <div class="slider-header"><span>Gain</span><span class="slider-val" id="val-gain">1.0</span></div>
                 <input type="range" id="sl-gain" min="0.0" max="5.0" value="1.0" step="0.1" oninput="updateParam('gain', this.value)">
                 <div class="range-metrics" id="range-gain"><em>Диапазон: —</em></div>
             </div>
-
             <!-- k1 -->
             <div class="slider-group">
-                <div class="slider-header">
-                    <span id="label-k1">k1</span>
-                    <span class="slider-val" id="val-k1">0.0</span>
-                </div>
+                <div class="slider-header"><span id="label-k1">k1</span><span class="slider-val" id="val-k1">0.0</span></div>
                 <input type="range" id="sl-k1" min="0.0" max="2.0" value="0.0" step="0.01" oninput="updateParam('k1', this.value)">
                 <div class="range-metrics" id="range-k1"><em>Диапазон: —</em></div>
             </div>
-
             <!-- k2 -->
             <div class="slider-group">
-                <div class="slider-header">
-                    <span id="label-k2">k2</span>
-                    <span class="slider-val" id="val-k2">0.0</span>
-                </div>
+                <div class="slider-header"><span id="label-k2">k2</span><span class="slider-val" id="val-k2">0.0</span></div>
                 <input type="range" id="sl-k2" min="0.0" max="2.0" value="0.0" step="0.01" oninput="updateParam('k2', this.value)">
                 <div class="range-metrics" id="range-k2"><em>Диапазон: —</em></div>
             </div>
-
             <!-- Bradley Window -->
             <div class="slider-group">
-                <div class="slider-header">
-                    <span>Bradley Window (Окно)</span>
-                    <span class="slider-val" id="val-win">8</span>
-                </div>
+                <div class="slider-header"><span>Bradley Window</span><span class="slider-val" id="val-win">8</span></div>
                 <input type="range" id="sl-win" min="2" max="64" value="8" step="1" oninput="updateParam('win', this.value)">
                 <div class="range-metrics" id="range-win"><em>Диапазон: —</em></div>
             </div>
-
             <!-- Bradley Sens -->
             <div class="slider-group">
-                <div class="slider-header">
-                    <span>Bradley S (Чувств.)</span>
-                    <span class="slider-val" id="val-sens">0.15</span>
-                </div>
+                <div class="slider-header"><span>Bradley S</span><span class="slider-val" id="val-sens">0.15</span></div>
                 <input type="range" id="sl-sens" min="0.01" max="0.50" value="0.15" step="0.01" oninput="updateParam('sens', this.value)">
                 <div class="range-metrics" id="range-sens"><em>Диапазон: —</em></div>
             </div>
@@ -299,17 +178,13 @@
         activeChannel: 'R',
         isRunning: false,
         staticImageData: null,
-        lastResultStr: null, // For beep logic
         results: { R: null, G: null, B: null },
         config: {
             R: { offset: 0, gain: 1.0, k1: 0.0, k2: 0.0, win: 8, sens: 0.15, neighbors: ['G', 'B'] },
             G: { offset: 0, gain: 1.0, k1: 0.0, k2: 0.0, win: 8, sens: 0.15, neighbors: ['R', 'B'] },
             B: { offset: 0, gain: 1.0, k1: 0.0, k2: 0.0, win: 8, sens: 0.15, neighbors: ['R', 'G'] }
         },
-        // Range memory storage
-        ranges: {
-            R: {}, G: {}, B: {}
-        }
+        ranges: { R: {}, G: {}, B: {} }
     };
 
     // Initialize Range Storage
@@ -321,7 +196,7 @@
 
     const els = {
         video: document.getElementById('video-source'),
-        canvas: document.getElementById('canvas-display'),
+        canvas: document.getElementById('canvas-display'), // Default 480x480 in HTML
         ctx: document.getElementById('canvas-display').getContext('2d', { willReadFrequently: true })
     };
 
@@ -332,31 +207,25 @@
             const ctx = new (window.AudioContext || window.webkitAudioContext)();
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.frequency.value = 800;
-            osc.type = 'square';
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.frequency.value = 800; osc.type = 'square';
             gain.gain.setValueAtTime(0.1, ctx.currentTime);
             gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.1);
-            osc.start(ctx.currentTime);
-            osc.stop(ctx.currentTime + 0.1);
+            osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.1);
         } catch(e) {}
     }
 
     function switchTab(ch) {
         state.activeChannel = ch;
-        state.lastResultStr = null; // Reset beep memory on tab switch
-        
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.querySelector(`.tab.${ch.toLowerCase()}`).classList.add('active');
 
         const conf = state.config[ch];
-        document.getElementById('label-k1').innerText = `k1 (Вычесть ${conf.neighbors[0]})`;
-        document.getElementById('label-k2').innerText = `k2 (Вычесть ${conf.neighbors[1]})`;
+        document.getElementById('label-k1').innerText = `k1 (${conf.neighbors[0]})`;
+        document.getElementById('label-k2').innerText = `k2 (${conf.neighbors[1]})`;
 
         loadParamsToUI(ch);
         updateRangeDisplay(ch);
-
         if (state.staticImageData && !state.isRunning) processStaticImage();
     }
 
@@ -390,7 +259,6 @@
         if (state.staticImageData && !state.isRunning) processStaticImage();
     }
 
-    // LED & Range Display Logic
     function setLED(ch, status) {
         const el = document.getElementById(`led-${ch.toLowerCase()}`);
         if (status) el.classList.add('active');
@@ -400,18 +268,13 @@
     function updateRangeDisplay(ch) {
         const ranges = state.ranges[ch];
         const params = ['offset', 'gain', 'k1', 'k2', 'win', 'sens'];
-        
         params.forEach(p => {
             const el = document.getElementById(`range-${p}`);
             const r = ranges[p];
-            
             if (r.min !== Infinity && r.max !== -Infinity) {
                 let minDisp = (p === 'offset' || p === 'win') ? r.min : r.min.toFixed(2);
                 let maxDisp = (p === 'offset' || p === 'win') ? r.max : r.max.toFixed(2);
                 el.innerHTML = `<span>Диапазон: ${minDisp} — ${maxDisp}</span>`;
-            } else if (r.min !== Infinity) {
-                 let minDisp = (p === 'offset' || p === 'win') ? r.min : r.min.toFixed(2);
-                 el.innerHTML = `<span>Min OK: ${minDisp}</span>`;
             } else {
                 el.innerHTML = `<em>Диапазон: —</em>`;
             }
@@ -440,6 +303,7 @@
         reader.onload = function(e) {
             const img = new Image();
             img.onload = function() {
+                // Force 480x480
                 els.canvas.width = 480; els.canvas.height = 480;
                 const size = Math.min(img.width, img.height);
                 const sx = (img.width - size) / 2;
@@ -456,36 +320,22 @@
     // === 3. PROCESSING ENGINE ===
 
     function handleDecodeSuccess(codeData, ch) {
-        // 1. Update State
         const isNew = state.results[ch] !== codeData;
         state.results[ch] = codeData;
-        
-        // 2. LED ON
         setLED(ch, true);
-
-        // 3. Beep if new
         if (isNew) playBeep();
 
-        // 4. Range Detector Logic
+        // Range Logic
         const conf = state.config[ch];
         const range = state.ranges[ch];
         const params = ['offset', 'gain', 'k1', 'k2', 'win', 'sens'];
-        
         let updated = false;
         params.forEach(p => {
             let val = conf[p];
             if (p !== 'offset' && p !== 'win') val = parseFloat(val.toFixed(2));
-
-            if (val < range[p].min) {
-                range[p].min = val;
-                updated = true;
-            }
-            if (val > range[p].max) {
-                range[p].max = val;
-                updated = true;
-            }
+            if (val < range[p].min) { range[p].min = val; updated = true; }
+            if (val > range[p].max) { range[p].max = val; updated = true; }
         });
-
         if (updated) updateRangeDisplay(ch);
     }
 
@@ -499,6 +349,8 @@
         const src = state.staticImageData;
         const conf = state.config[state.activeChannel];
         const w = 480, h = 480;
+        
+        // Create fresh data
         const currentData = new ImageData(new Uint8ClampedArray(src.data), w, h);
         const processedBuffer = new Uint8ClampedArray(w * h);
 
@@ -519,13 +371,15 @@
         applyBradley(processedBuffer, currentData, w, h, conf.win, conf.sens);
         els.ctx.putImageData(currentData, 0, 0);
 
-        // Scan
-        const code = jsQR(currentData.data, w, h, { inversionAttempts: "dontInvert" });
+        // Scan with Inversion Attempts
+        const code = jsQR(currentData.data, w, h, { inversionAttempts: "attemptBoth" });
+        
         if (code) {
             handleDecodeSuccess(code.data, state.activeChannel);
             drawOverlay(code.location);
         } else {
             handleDecodeFail(state.activeChannel);
+            console.log("Scan: Pattern detected but decode failed (or no code)."); // Debug log
         }
     }
 
@@ -536,7 +390,9 @@
         const ctx = els.ctx;
 
         if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            // Ensure 480x480
             if (canvas.width !== 480) { canvas.width = 480; canvas.height = 480; }
+            
             const size = Math.min(video.videoWidth, video.videoHeight);
             const sx = (video.videoWidth - size) / 2;
             const sy = (video.videoHeight - size) / 2;
@@ -565,8 +421,9 @@
             applyBradley(processedBuffer, imgData, 480, 480, conf.win, conf.sens);
             ctx.putImageData(imgData, 0, 0);
 
-            // Scan
-            const code = jsQR(imgData.data, 480, 480, { inversionAttempts: "dontInvert" });
+            // Scan with Inversion Attempts
+            const code = jsQR(imgData.data, 480, 480, { inversionAttempts: "attemptBoth" });
+            
             if (code) {
                 handleDecodeSuccess(code.data, state.activeChannel);
                 drawOverlay(code.location);
